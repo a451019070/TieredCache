@@ -29,6 +29,76 @@ public actor DiskCache {
             .appendingPathComponent(key.fileName, isDirectory: false)
     }
 
+    // MARK: - Resume
+
+    /// 断点续传元数据(URLSession 的 resumeData)路径。
+    /// 放在隐藏目录 `.partial` 下,不参与容量统计,也不会被 `trim` 当成缓存文件清理。
+    nonisolated public func resumeDataURL(for key: CacheKey, category: CacheCategory) -> URL {
+        partialDirectory(category)
+            .appendingPathComponent(key.shard, isDirectory: true)
+            .appendingPathComponent(key.fileName + ".resume", isDirectory: false)
+    }
+
+    nonisolated private func partialDirectory(_ category: CacheCategory) -> URL {
+        rootURL.appendingPathComponent(".partial", isDirectory: true)
+            .appendingPathComponent(category.name, isDirectory: true)
+    }
+
+    nonisolated public func resumeData(for key: CacheKey, category: CacheCategory) -> Data? {
+        guard let data = try? Data(contentsOf: resumeDataURL(for: key, category: category)) else {
+            return nil
+        }
+        // `downloadTask(withResumeData:)` 拿到不认的数据会抛 ObjC 异常直接崩溃,
+        // 所以自己先解一遍归档,不合法就当没有断点。
+        guard Self.isUsableResumeData(data) else {
+            removeResumeData(for: key, category: category)
+            return nil
+        }
+        return data
+    }
+
+    /// resumeData 是 `NSKeyedArchiver` 归档。
+    /// 只做结构校验不够:`downloadTask(withResumeData:)` 遇到内容异常的归档同样会崩,
+    /// 所以这里真正解一遍,能解出顶层对象才认为可用。
+    nonisolated static func isUsableResumeData(_ data: Data) -> Bool {
+        guard !data.isEmpty,
+              let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil),
+              let archive = plist as? [String: Any],
+              archive["$archiver"] as? String == "NSKeyedArchiver",
+              let top = archive["$top"] as? [String: Any],
+              top["NSKeyedArchiveRootObjectKey"] != nil,
+              archive["$objects"] is [Any] else { return false }
+
+        // 真正展开一次。允许任意类,因为归档里是 CFNetwork 私有类型,
+        // 我们只关心"能不能安全解出来",解不出就丢弃。
+        let unarchiver = try? NSKeyedUnarchiver(forReadingFrom: data)
+        unarchiver?.requiresSecureCoding = false
+        defer { unarchiver?.finishDecoding() }
+        return unarchiver?.decodeObject(forKey: NSKeyedArchiveRootObjectKey) != nil
+    }
+
+    nonisolated public func storeResumeData(_ data: Data, for key: CacheKey, category: CacheCategory) {
+        let url = resumeDataURL(for: key, category: category)
+        do {
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(),
+                                                    withIntermediateDirectories: true)
+            try data.write(to: url, options: .atomic)
+        } catch {
+            // 续传数据只是优化,写失败不影响正常下载。
+        }
+    }
+
+    nonisolated public func removeResumeData(for key: CacheKey, category: CacheCategory) {
+        let url = resumeDataURL(for: key, category: category)
+        try? FileManager.default.removeItem(at: url)
+        // 顺手清掉空的分片目录,避免 `.partial` 里堆积空壳。
+        let shard = url.deletingLastPathComponent()
+        if let items = try? FileManager.default.contentsOfDirectory(atPath: shard.path),
+           items.isEmpty {
+            try? FileManager.default.removeItem(at: shard)
+        }
+    }
+
     // MARK: - Query
 
     /// 返回有效(存在且未过期)的文件 URL,并刷新访问时间。
@@ -77,10 +147,12 @@ public actor DiskCache {
 
     public func remove(_ key: CacheKey, category: CacheCategory) {
         try? fm.removeItem(at: path(key, category))
+        removeResumeData(for: key, category: category)
     }
 
     public func removeAll(category: CacheCategory) {
         try? fm.removeItem(at: categoryDirectory(category))
+        try? fm.removeItem(at: partialDirectory(category))
     }
 
     public func removeAll() {
