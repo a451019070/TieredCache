@@ -7,14 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		FBCD7A7A309C1AE90057EB66 /* CacheTransformer.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBCD7A73309C1AE90057EB66 /* CacheTransformer.swift */; };
 		FBCD7A7B309C1AE90057EB66 /* MemoryCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBCD7A76309C1AE90057EB66 /* MemoryCache.swift */; };
 		FBCD7A7C309C1AE90057EB66 /* Downloader.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBCD7A75309C1AE90057EB66 /* Downloader.swift */; };
 		FBCD7A7D309C1AE90057EB66 /* CacheKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBCD7A72309C1AE90057EB66 /* CacheKey.swift */; };
 		FBCD7A7E309C1AE90057EB66 /* CacheCategory.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBCD7A71309C1AE90057EB66 /* CacheCategory.swift */; };
 		FBCD7A7F309C1AE90057EB66 /* TieredCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBCD7A77309C1AE90057EB66 /* TieredCache.swift */; };
 		FBCD7A80309C1AE90057EB66 /* DiskCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBCD7A74309C1AE90057EB66 /* DiskCache.swift */; };
-		FBCD7A86309C5EC70057EB66 /* URL+TieredCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBCD7A85309C5EC70057EB66 /* URL+TieredCache.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -40,12 +38,10 @@
 		FB2026CD308091E10046F39B /* TieredCacheUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TieredCacheUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		FBCD7A71309C1AE90057EB66 /* CacheCategory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CacheCategory.swift; sourceTree = "<group>"; };
 		FBCD7A72309C1AE90057EB66 /* CacheKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CacheKey.swift; sourceTree = "<group>"; };
-		FBCD7A73309C1AE90057EB66 /* CacheTransformer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CacheTransformer.swift; sourceTree = "<group>"; };
 		FBCD7A74309C1AE90057EB66 /* DiskCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiskCache.swift; sourceTree = "<group>"; };
 		FBCD7A75309C1AE90057EB66 /* Downloader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Downloader.swift; sourceTree = "<group>"; };
 		FBCD7A76309C1AE90057EB66 /* MemoryCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryCache.swift; sourceTree = "<group>"; };
 		FBCD7A77309C1AE90057EB66 /* TieredCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TieredCache.swift; sourceTree = "<group>"; };
-		FBCD7A85309C5EC70057EB66 /* URL+TieredCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "URL+TieredCache.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -117,12 +113,10 @@
 			children = (
 				FBCD7A71309C1AE90057EB66 /* CacheCategory.swift */,
 				FBCD7A72309C1AE90057EB66 /* CacheKey.swift */,
-				FBCD7A73309C1AE90057EB66 /* CacheTransformer.swift */,
 				FBCD7A74309C1AE90057EB66 /* DiskCache.swift */,
 				FBCD7A75309C1AE90057EB66 /* Downloader.swift */,
 				FBCD7A76309C1AE90057EB66 /* MemoryCache.swift */,
 				FBCD7A77309C1AE90057EB66 /* TieredCache.swift */,
-				FBCD7A85309C5EC70057EB66 /* URL+TieredCache.swift */,
 			);
 			path = TieredCache;
 			sourceTree = "<group>";
@@ -279,13 +273,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				FBCD7A7A309C1AE90057EB66 /* CacheTransformer.swift in Sources */,
 				FBCD7A7B309C1AE90057EB66 /* MemoryCache.swift in Sources */,
 				FBCD7A7C309C1AE90057EB66 /* Downloader.swift in Sources */,
 				FBCD7A7D309C1AE90057EB66 /* CacheKey.swift in Sources */,
 				FBCD7A7E309C1AE90057EB66 /* CacheCategory.swift in Sources */,
 				FBCD7A7F309C1AE90057EB66 /* TieredCache.swift in Sources */,
-				FBCD7A86309C5EC70057EB66 /* URL+TieredCache.swift in Sources */,
 				FBCD7A80309C1AE90057EB66 /* DiskCache.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

@@ -3,8 +3,8 @@ import Foundation
 import UIKit
 #endif
 
-/// 三级缓存入口:内存(L1) -> 磁盘(L2) -> 网络(L3),命中后向上回填。
-/// 取值接口风格参考 `UserDefaults`:`data(forKey:)`、`url(forKey:)`、`image(forKey:)`。
+/// 缓存入口:内存(L1) -> 磁盘(L2) -> 网络(L3),命中后向上回填。
+/// 取值接口:`url(forKey:)` 返回本地文件路径,`data(forKey:)` 返回 Data。
 public final class TieredCache: @unchecked Sendable {
     public nonisolated static let shared = TieredCache()
 
@@ -67,29 +67,6 @@ public extension TieredCache {
         if let cached = await disk.fileURL(for: key, category: category) { return cached }
         return try await downloader.download(url, key: key, category: category, disk: disk)
     }
-
-    /// 取解码后的对象(如 UIImage),内存里缓存解码结果。
-    func object<T: CacheTransformer>(forKey url: URL,
-                                     category: CacheCategory,
-                                     transformer: T) async throws -> T.Object {
-        let key = key(for: url)
-        let memKey = "obj/\(transformer.identifier)/\(key.fileName)"
-
-        if let cached = memory.object(forKey: memKey, category: category) as? T.Object {
-            return cached
-        }
-        let data = try await self.data(forKey: url, category: category)
-        let object = try transformer.decode(data)
-        memory.set(object, cost: transformer.cost(of: object), forKey: memKey, category: category)
-        return object
-    }
-
-    #if canImport(UIKit)
-    /// 取图片。再次命中内存时免解码。
-    func image(forKey url: URL, category: CacheCategory = .small) async throws -> UIImage {
-        try await object(forKey: url, category: category, transformer: ImageTransformer())
-    }
-    #endif
 }
 
 // MARK: - 查询(仅查本地,不触发下载)
@@ -107,17 +84,6 @@ public extension TieredCache {
     func cachedURL(forKey url: URL, category: CacheCategory) async -> URL? {
         await disk.fileURL(for: key(for: url), category: category)
     }
-
-    #if canImport(UIKit)
-    func cachedImage(forKey url: URL, category: CacheCategory = .small) async -> UIImage? {
-        let memKey = "obj/uiimage/\(key(for: url).fileName)"
-        if let cached = memory.object(forKey: memKey, category: category) as? UIImage {
-            return cached
-        }
-        guard let data = await cachedData(forKey: url, category: category) else { return nil }
-        return try? ImageTransformer().decode(data)
-    }
-    #endif
 }
 
 // MARK: - Store / Remove
@@ -132,7 +98,6 @@ public extension TieredCache {
     func remove(for url: URL, category: CacheCategory) async {
         let key = key(for: url)
         memory.remove(forKey: "data/\(key.fileName)", category: category)
-        memory.remove(forKey: "obj/uiimage/\(key.fileName)", category: category)
         await disk.remove(key, category: category)
     }
 
