@@ -1,15 +1,12 @@
 import Foundation
-#if canImport(UIKit)
-import UIKit
-#endif
 
-/// 缓存入口:内存(L1) -> 磁盘(L2) -> 网络(L3),命中后向上回填。
-/// 取值接口:`url(forKey:)` 返回本地文件路径,`data(forKey:)` 返回 Data。
+/// 三级缓存入口:内存(L1) -> 磁盘(L2) -> 网络(L3),命中后向上回填。
+/// 取值接口风格参考 `UserDefaults`:`data(forKey:)`、`url(forKey:)`、`image(forKey:)`。
 public final class TieredCache: @unchecked Sendable {
     public nonisolated static let shared = TieredCache()
 
     /// 自定义 key 生成,用于去掉 URL 中的鉴权、时间戳等易变参数。
-    public var keyFilter: ((URL) -> String)?
+    public let keyFilter: (@Sendable (URL) -> String)?
 
     let memory = MemoryCache()
     public let disk: DiskCache
@@ -18,8 +15,11 @@ public final class TieredCache: @unchecked Sendable {
     private let lock = NSLock()
     private var categories: [CacheCategory] = [.tiny, .small, .medium, .large]
 
-    public init(disk: DiskCache = DiskCache(), session: URLSession = .shared) {
+    public init(disk: DiskCache = DiskCache(),
+                session: URLSession = .shared,
+                keyFilter: (@Sendable (URL) -> String)? = nil) {
         self.disk = disk
+        self.keyFilter = keyFilter
         self.downloader = Downloader(session: session)
         observeSystemEvents()
     }
@@ -67,6 +67,29 @@ public extension TieredCache {
         if let cached = await disk.fileURL(for: key, category: category) { return cached }
         return try await downloader.download(url, key: key, category: category, disk: disk)
     }
+
+//    /// 取解码后的对象(如 UIImage),内存里缓存解码结果。
+//    func object<T: CacheTransformer>(forKey url: URL,
+//                                     category: CacheCategory,
+//                                     transformer: T) async throws -> T.Object {
+//        let key = key(for: url)
+//        let memKey = "obj/\(transformer.identifier)/\(key.fileName)"
+//
+//        if let cached = memory.object(forKey: memKey, category: category) as? T.Object {
+//            return cached
+//        }
+//        let data = try await self.data(forKey: url, category: category)
+//        let object = try transformer.decode(data)
+//        memory.set(object, cost: transformer.cost(of: object), forKey: memKey, category: category)
+//        return object
+//    }
+//
+//    #if canImport(UIKit)
+//    /// 取图片。再次命中内存时免解码。
+//    func image(forKey url: URL, category: CacheCategory = .small) async throws -> UIImage {
+//        try await object(forKey: url, category: category, transformer: ImageTransformer())
+//    }
+//    #endif
 }
 
 // MARK: - 查询(仅查本地,不触发下载)
@@ -84,6 +107,17 @@ public extension TieredCache {
     func cachedURL(forKey url: URL, category: CacheCategory) async -> URL? {
         await disk.fileURL(for: key(for: url), category: category)
     }
+
+//    #if canImport(UIKit)
+//    func cachedImage(forKey url: URL, category: CacheCategory = .small) async -> UIImage? {
+//        let memKey = "obj/uiimage/\(key(for: url).fileName)"
+//        if let cached = memory.object(forKey: memKey, category: category) as? UIImage {
+//            return cached
+//        }
+//        guard let data = await cachedData(forKey: url, category: category) else { return nil }
+//        return try? ImageTransformer().decode(data)
+//    }
+//    #endif
 }
 
 // MARK: - Store / Remove
@@ -132,13 +166,8 @@ private extension TieredCache {
 
     func observeSystemEvents() {
         #if canImport(UIKit) && !os(watchOS)
-        let center = NotificationCenter.default
-        center.addObserver(forName: UIApplication.didReceiveMemoryWarningNotification,
-                           object: nil, queue: nil) { [weak self] _ in
-            self?.memory.removeAll()
-        }
-        center.addObserver(forName: UIApplication.didEnterBackgroundNotification,
-                           object: nil, queue: nil) { [weak self] _ in
+        NotificationCenter.default.addObserver(forName: UIApplication.didEnterBackgroundNotification,
+                                               object: nil, queue: nil) { [weak self] _ in
             guard let self else { return }
             Task.detached { await self.trimDisk() }
         }

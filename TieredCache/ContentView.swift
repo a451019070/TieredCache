@@ -17,7 +17,14 @@ extension CacheCategory {
 }
 
 struct ContentView: View {
-    private let cache = TieredCache.shared
+    /// 自定义 key 过滤(去掉鉴权/时间戳参数),只能在初始化时设置。
+    private let cache = TieredCache(keyFilter: { url in
+        guard var comps = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            return url.absoluteString
+        }
+        comps.queryItems = comps.queryItems?.filter { !["token", "sign", "t"].contains($0.name) }
+        return comps.string ?? url.absoluteString
+    })
     private let imageURL = URL(string: "https://picsum.photos/600/400.jpg")!
     private let videoURL = URL(string: "https://www.w3schools.com/html/mov_bbb.mp4")!
     private let jsonURL = URL(string: "https://httpbin.org/json")!
@@ -66,13 +73,6 @@ struct ContentView: View {
 
     /// 初始化:自定义 key 过滤(去掉鉴权/时间戳参数),并注册自定义分类参与定期清理。
     private func setup() {
-        cache.keyFilter = { url in
-            guard var comps = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
-                return url.absoluteString
-            }
-            comps.queryItems = comps.queryItems?.filter { !["token", "sign", "t"].contains($0.name) }
-            return comps.string ?? url.absoluteString
-        }
         cache.register(.audio)
     }
 
@@ -80,7 +80,8 @@ struct ContentView: View {
     private func loadImage() async {
         #if canImport(UIKit)
         do {
-            image = try await imageURL.loadImage(category: .small)
+            image = UIImage(data: try await cache.data(forKey: imageURL, category: .small))
+//            image = try await imageURL.loadImage(category: .small)
             log = "图片加载成功"
         } catch {
             log = "图片加载失败: \(error)"
