@@ -1,7 +1,10 @@
 import Foundation
+#if canImport(UIKit) && !os(watchOS)
+import UIKit
+#endif
 
 /// 三级缓存入口:内存(L1) -> 磁盘(L2) -> 网络(L3),命中后向上回填。
-/// 取值接口风格参考 `UserDefaults`:`data(forKey:)`、`url(forKey:)`、`image(forKey:)`。
+/// 取值接口风格参考 `UserDefaults`:`data(forKey:)`、`url(forKey:)`。
 public final class TieredCache: @unchecked Sendable {
     public nonisolated static let shared = TieredCache()
 
